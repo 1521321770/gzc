@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" 
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+           http://www.springframework.org/schema/aop 
+           http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-3.0.xsd
+           http://www.springframework.org/schema/tx
+           http://www.springframework.org/schema/tx/spring-tx-3.0.xsd"
+     default-autowire="byName" default-lazy-init="true">
+     
+     <context:annotation-config />
+   	 <context:component-scan  base-package="com.gengzc" /> 
+   	 <aop:aspectj-autoproxy />
+     
+	<!-- 定义受环境影响易变的变量 -->
+	<bean id="propertyConfigurer"
+		class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="ignoreUnresolvablePlaceholders" value="true" />
+		<property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+		<property name="ignoreResourceNotFound" value="true" />
+		<property name="locations">
+			<list>
+				<!-- 本地数据库开发环境配置 -->
+				<value>/WEB-INF/spring-configuration/jdbc.properties</value>
+			</list>
+		</property>
+	</bean>
+	
+	<!-- 建立数据源 -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource">
+		<!-- 数据库驱动，我这里使用的是Mysql数据库 -->
+		<property name="driverClassName">
+			<value>${jdbc.driverClassName}</value>
+		</property>
+		
+		<!-- 数据库地址，这里也要注意一下编码，不然乱码可是很郁闷的哦！ -->
+		<property name="url">
+			<value>${jdbc.url}</value>
+		</property>
+		
+		<!-- 数据库的用户名 -->
+		<property name="username">
+			<value>${jdbc.username}</value>
+		</property>
+		
+		<!-- 数据库的密码 -->
+		<property name="password">
+			<value>${jdbc.password}</value>
+		</property>
+		
+		<property name="testOnBorrow">
+			<value>true</value>
+		</property>
+		
+		<property name="validationQuery">
+			<value>select 1</value>
+		</property>
+		
+		<!-- 设定最大连接数  -->
+        <property name="maxActive"><value>500</value></property>
+        
+        <!-- 设定最大空闲时间（毫秒） -->
+        <property name="maxIdle"><value>10000</value></property>
+        
+        <!-- 设定最大等待时间（毫秒） -->
+        <property name="maxWait"><value>1000</value></property>
+        
+        <!-- 超时自动收回 -->
+        <property name="removeAbandoned"><value>true</value></property>
+        
+        <!--
+        	超时时间(以秒数为单位)设置超时时间有一个要注意的地方，
+			超时时间=现在的时间-程序中创建Connection的时间，
+			如果maxActive比较大，比如超过100，那么removeAbandonedTimeout
+			可以设置长一点比如180， 也就是三分钟无响应的连接进行回收，当然应用的不同设置长度也不同。
+        -->
+        <property name="removeAbandonedTimeout"><value>180</value></property>
+        
+        <!-- 在自动回收超时连接的时候打印连接的超时错误 -->
+        <property name="logAbandoned"><value>true</value></property>
+	</bean>
+
+	<!-- 把数据源注入给Session工厂 -->
+	<bean id="sessionFactory"
+		class="org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBean">
+		<property name="dataSource">
+			<ref bean="dataSource" />
+		</property>
+		
+		<!-- 配置映射文件 -->
+<!-- 		<property name="mappingResources">
+			<list>
+			    <value>com/gengzc/bean/Model.hbm.xml</value>  
+			</list>
+		</property> -->
+
+		
+		<property name="packagesToScan">
+			<list>
+			    <value>com.gengzc.bean</value>  
+			</list>
+		</property>
+		
+		<property name="hibernateProperties">
+		   <props>
+		    <!-- 1：读操作未提交（Read Uncommitted）2：读操作已提交（Read Committed）4：可重读（Repeatable Read）8：可串行化（Serializable） -->
+		    <prop key="hibernate.connection.isolation">4</prop> 
+		    <prop key="hibernate.format_sql">true</prop>  
+		    <prop key="hibernate.query.substitutions">true</prop>
+		    <prop key="hibernate.cache.use_query_cache">false</prop>
+		    <prop key="hibernate.show_sql">true</prop>
+		    <prop key="hibernate.order_inserts">true</prop>   
+		    <prop key="hibernate.order_updates">true</prop> 
+		    <prop key="hibernate.dialect">org.hibernate.dialect.MySQLInnoDBDialect</prop>
+		    <prop key="javax.persistence.validation.mode">none</prop> 
+		   </props>
+		</property>
+	</bean>
+
+
+	<!-- 数据库事务管理器 开始 -->
+	<bean id="txManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+        <property name="sessionFactory" ref="sessionFactory" />
+    </bean>
+    <tx:annotation-driven transaction-manager="txManager" proxy-target-class="true" />
+
+     <tx:advice id="txAdvice" transaction-manager="txManager">
+         <tx:attributes>
+            <tx:method name="do*" propagation="REQUIRED" rollback-for="java.lang.Exception"/>
+            <tx:method name="add*" propagation="REQUIRED" rollback-for="java.lang.Exception" />
+            <tx:method name="update*" propagation="REQUIRED" rollback-for="java.lang.Exception"/>
+            <tx:method name="del*" propagation="REQUIRED" rollback-for="java.lang.Exception"/>
+            <tx:method name="run*" propagation="REQUIRED" rollback-for="java.lang.Exception"/>
+            <tx:method name="get*" propagation="REQUIRED" read-only="true" rollback-for="java.lang.Exception"/>
+            <tx:method name="find*" propagation="REQUIRED" read-only="true" rollback-for="java.lang.Exception"/>
+           <tx:method name="*" propagation="SUPPORTS"/> 
+        </tx:attributes> 
+    </tx:advice> 
+	<aop:aspectj-autoproxy proxy-target-class="true"/>
+  <aop:config>
+        <aop:pointcut id="allManagerMethod" expression="execution(* com.gengzc.service..*.*(..))" />
+        <aop:advisor advice-ref="txAdvice" pointcut-ref="allManagerMethod" />
+
+    </aop:config> 
+	<!-- 数据库事务管理器 结束 -->
+
+    <bean id="baseDao" class="com.gengzc.dao.hibernateDaoSupport.BaseHibernateDao"></bean>
+
+</beans>
+
+

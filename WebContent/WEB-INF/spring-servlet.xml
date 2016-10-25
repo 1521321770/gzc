@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:c="http://www.springframework.org/schema/c" 
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" 
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd
+		http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-3.0.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+        
+    <context:component-scan base-package="com.gengzc.controller" /> 
+        
+<!--     最重要的时候后面两个配置，这将使得注解生效！ -->
+    <bean  
+        id="urlMapping"  
+        class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping" /> 
+    
+    	<!-- 直接关系到多动作控制器配置是否可用！ -->
+	<bean id="messageAdapter" 
+		  class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">  
+       <property name="messageConverters">  
+           <list>  
+               <!-- Support JSON -->   
+               <bean class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter"/>  
+           </list>  
+       </property>  
+   </bean>  
+    <bean id="exceptionMessageAdapter" class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerExceptionResolver">  
+       <property name="messageConverters">  
+           <list>  
+               <!-- Support JSON -->   
+               <bean class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter"/>  
+           </list>  
+       </property>  
+   </bean>  
+
+	<!-- 这里使用了JstlView作为视图解析器。同时，指定前缀路径为"/page/"，后缀路径为".jsp"。
+		也就是说，Spring容器将会在这个路径中寻找匹配的jsp文件！ 
+		注意加入xmlns:p="http://www.springframework.org/schema/p"命名空间！
+     -->
+	<bean  
+        id="jstlViewResolver"  
+        class="org.springframework.web.servlet.view.InternalResourceViewResolver"  
+        p:viewClass="org.springframework.web.servlet.view.JstlView"  
+        p:prefix="/"  
+        p:suffix=".jsp" />  
+        
+</beans>
+
